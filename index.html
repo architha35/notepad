@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Notepad</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Smooth transition for theme switching and interactive elements */
+        * {
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.1s ease;
+        }
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 font-sans flex flex-col overflow-hidden">
+
+    <!-- Notification Toast System -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Main App Container -->
+    <div class="flex h-full w-full overflow-hidden relative">
+
+        <!-- Sidebar Panel -->
+        <aside id="sidebar" class="w-80 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 flex flex-col shrink-0 transform md:transform-none transition-transform duration-300 absolute md:relative z-30 h-full -translate-x-full md:translate-x-0">
+            <!-- Sidebar Header -->
+            <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="p-2 bg-brand-100 dark:bg-brand-900 text-brand-600 dark:text-brand-400 rounded-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    </span>
+                    <span class="font-bold text-lg tracking-tight bg-gradient-to-r from-brand-600 to-sky-500 bg-clip-text text-transparent">NoteFlow</span>
+                </div>
+                
+                <!-- Close sidebar button (Mobile Only) -->
+                <button onclick="toggleSidebar()" class="p-2 md:hidden text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Note Controls -->
+            <div class="p-4 space-y-3">
+                <button onclick="createNewNote()" class="w-full py-2.5 px-4 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-xl flex items-center justify-center gap-2 shadow-sm shadow-brand-500/20 active:scale-95 transition-transform">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    New Note
+                </button>
+
+                <!-- Search -->
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </span>
+                    <input type="text" id="search-input" oninput="filterNotes()" placeholder="Search notes..." class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+            </div>
+
+            <!-- Notes List Area -->
+            <div class="flex-1 overflow-y-auto px-2 pb-4" id="notes-list">
+                <!-- Dynamic Content Here -->
+            </div>
+        </aside>
+
+        <!-- Sidebar overlay for mobile view -->
+        <div id="sidebar-overlay" onclick="toggleSidebar()" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-20 md:hidden"></div>
+
+        <!-- Main Editor Area -->
+        <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+
+            <!-- Control Bar (Top Navigation) -->
+            <header class="h-16 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 flex items-center justify-between px-4 md:px-6 z-10">
+                <div class="flex items-center gap-2">
+                    <!-- Hamburger button for mobile -->
+                    <button onclick="toggleSidebar()" class="p-2 md:hidden text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <!-- Current Category Tag -->
+                    <span id="active-note-category-badge" class="px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                        Draft
+                    </span>
+                    <!-- Save Indicator -->
+                    <span id="save-indicator" class="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
+                        <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                        Saved locally
+                    </span>
+                </div>
+
+                <div class="flex items-center gap-1 sm:gap-2">
+                    <!-- Action: Export -->
+                    <div class="relative group">
+                        <button class="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg flex items-center gap-1" title="Export Note">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            <span class="hidden sm:inline text-sm font-medium">Export</span>
+                        </button>
+                        <!-- Dropdown Menu -->
+                        <div class="absolute right-0 top-full mt-1 hidden group-hover:block hover:block bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg py-1.5 w-40 z-50">
+                            <button onclick="exportNote('txt')" class="w-full text-left px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                Plain Text (.txt)
+                            </button>
+                            <button onclick="exportNote('md')" class="w-full text-left px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                                Markdown (.md)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Action: Import -->
+                    <label class="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg flex items-center gap-1 cursor-pointer" title="Import Note">
+                        <input type="file" id="file-import" accept=".txt,.md" class="hidden" onchange="importNote(event)">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        <span class="hidden sm:inline text-sm font-medium">Import</span>
+                    </label>
+
+                    <!-- Divider -->
+                    <div class="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
+
+                    <!-- Toggle Light/Dark Mode -->
+                    <button onclick="toggleDarkMode()" class="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg" title="Toggle Theme">
+                        <svg id="sun-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-11.314l.707.707m11.314 11.314l.707.707M12 7a5 5 0 110 10 5 5 0 010-10z"></path></svg>
+                        <svg id="moon-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                    </button>
+
+                    <!-- Delete Note -->
+                    <button onclick="deleteCurrentNote()" class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg" title="Delete Note">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Text Editor -->
+            <div class="flex-1 flex flex-col p-4 md:p-8 overflow-y-auto bg-white dark:bg-slate-950">
+                <div class="max-w-4xl w-full mx-auto flex-1 flex flex-col space-y-4">
+                    <!-- Note Meta Input Grid -->
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+                        <!-- Category Input Selector -->
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Category:</span>
+                            <select id="note-category-select" onchange="onCategoryChange(this.value)" class="text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                                <option value="Personal">Personal</option>
+                                <option value="Work">Work</option>
+                                <option value="Ideas">Ideas</option>
+                                <option value="Drafts">Drafts</option>
+                                <option value="Tasks">Tasks</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Note Title Input -->
+                    <input type="text" id="note-title-input" oninput="onTitleChange(this.value)" placeholder="Untitled Note" class="text-3xl md:text-4xl font-extrabold bg-transparent border-none outline-none focus:ring-0 placeholder-slate-300 dark:placeholder-slate-700 w-full py-2">
+
+                    <!-- Separator -->
+                    <div class="h-px bg-slate-100 dark:bg-slate-800 w-full"></div>
+
+                    <!-- Main Textarea -->
+                    <textarea id="note-body-textarea" oninput="onBodyChange(this.value)" placeholder="Start typing something inspiring..." class="flex-1 w-full bg-transparent border-none outline-none resize-none focus:ring-0 placeholder-slate-300 dark:placeholder-slate-700 leading-relaxed text-slate-700 dark:text-slate-300 text-base md:text-lg min-h-[300px]"></textarea>
+                </div>
+            </div>
+
+            <!-- Footer Stats Bar -->
+            <footer class="h-10 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 md:px-6 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                <div class="flex items-center gap-4">
+                    <span id="char-count">0 characters</span>
+                    <span id="word-count">0 words</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span id="read-time">0 min read</span>
+                </div>
+            </footer>
+
+        </main>
+    </div>
+
+    <!-- Script Application Logic -->
+    <script>
+        // In-memory state
+        let notes = [
+            {
+                id: 'default-note-1',
+                title: 'Getting Started with NoteFlow 📝',
+                content: 'Welcome to NoteFlow! This is a simple, sleek notepad app built to help you capture ideas instantly.\n\n### Features Highlight:\n- **Organize by Categories**: Tag notes as Work, Personal, Ideas, or Custom drafts.\n- **Quick Search**: Instantly filter your notes dynamically as you type.\n- **Live Stats**: Keep track of characters, word counts, and estimated reading times at the bottom.\n- **Universal Exporting**: Save your notes as Markdown (`.md`) or plain text (`.txt`) at any time.\n- **File Importation**: Seamlessly drop files or import text notes to edit them instantly here!\n\nSimply clear this note or start a new note by pressing the "+ New Note" button in the sidebar. Enjoy writing!',
+                category: 'Ideas',
+                updatedAt: new Date().toISOString()
+            }
+        ];
+
+        let activeNoteId = 'default-note-1';
+        let sidebarOpen = false;
+
+        // Dom Elements
+        const notesListContainer = document.getElementById('notes-list');
+        const searchInput = document.getElementById('search-input');
+        const activeCategoryBadge = document.getElementById('active-note-category-badge');
+        const noteCategorySelect = document.getElementById('note-category-select');
+        const noteTitleInput = document.getElementById('note-title-input');
+        const noteBodyTextarea = document.getElementById('note-body-textarea');
+        const charCount = document.getElementById('char-count');
+        const wordCount = document.getElementById('word-count');
+        const readTime = document.getElementById('read-time');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const sunIcon = document.getElementById('sun-icon');
+        const moonIcon = document.getElementById('moon-icon');
+        const saveIndicator = document.getElementById('save-indicator');
+
+        // Initial setup
+        window.onload = () => {
+            renderNotesList();
+            loadNote(activeNoteId);
+            updateStats();
+        };
+
+        // UI Toast Notifications
+        function showNotification(message, type = 'success') {
+            const toastContainer = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            toast.className = `flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border text-sm pointer-events-auto transform translate-y-2 opacity-0 transition-all duration-300 max-w-xs ${
+                type === 'success' 
+                    ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200' 
+                    : 'bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200'
+            }`;
+
+            const checkIcon = `<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            const alertIcon = `<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+
+            toast.innerHTML = `${type === 'success' ? checkIcon : alertIcon} <span>${message}</span>`;
+            
+            toastContainer.appendChild(toast);
+            
+            // Trigger animation
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            // Clear element
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+
+        // Sidebar Toggle
+        function toggleSidebar() {
+            sidebarOpen = !sidebarOpen;
+            if (sidebarOpen) {
+                sidebar.classList.remove('-translate-x-full');
+                sidebarOverlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                sidebarOverlay.classList.add('hidden');
+            }
+        }
+
+        // Active Note Selection & Rendering
+        function loadNote(id) {
+            const note = notes.find(n => n.id === id);
+            if (!note) return;
+
+            activeNoteId = id;
+            
+            // Set inputs
+            noteTitleInput.value = note.title;
+            noteBodyTextarea.value = note.content;
+            noteCategorySelect.value = note.category;
+            activeCategoryBadge.textContent = note.category;
+
+            // Highlight dynamic item in sidebar
+            document.querySelectorAll('.note-item').forEach(el => {
+                el.classList.remove('bg-brand-50', 'dark:bg-brand-950/30', 'border-brand-500');
+                el.classList.add('border-transparent');
+            });
+
+            const activeEl = document.getElementById(`note-item-${id}`);
+            if (activeEl) {
+                activeEl.classList.add('bg-brand-50', 'dark:bg-brand-950/30', 'border-brand-500');
+                activeEl.classList.remove('border-transparent');
+            }
+
+            updateStats();
+        }
+
+        // Create New Note
+        function createNewNote() {
+            const newNote = {
+                id: 'note-' + Date.now(),
+                title: '',
+                content: '',
+                category: 'Personal',
+                updatedAt: new Date().toISOString()
+            };
+
+            notes.unshift(newNote);
+            renderNotesList();
+            loadNote(newNote.id);
+            
+            // Automatically focus the title for seamless onboarding
+            noteTitleInput.focus();
+
+            // Auto-close sidebar on mobile
+            if (window.innerWidth < 768) {
+                toggleSidebar();
+            }
+
+            showNotification('New note created!');
+        }
+
+        // Delete Note Handler
+        function deleteCurrentNote() {
+            if (notes.length <= 1) {
+                showNotification('Keep at least one note to continue writing!', 'error');
+                return;
+            }
+
+            const confirmModal = confirm('Are you sure you want to delete this note?');
+            if (!confirmModal) return;
+
+            const index = notes.findIndex(n => n.id === activeNoteId);
+            if (index !== -1) {
+                notes.splice(index, 1);
+                
+                // Select the next available note
+                const nextActiveId = notes[0].id;
+                renderNotesList();
+                loadNote(nextActiveId);
+                showNotification('Note deleted successfully.');
+            }
+        }
+
+        // Input changes handlers
+        function onTitleChange(value) {
+            const note = notes.find(n => n.id === activeNoteId);
+            if (note) {
+                note.title = value;
+                note.updatedAt = new Date().toISOString();
+                updateSidebarItem(note);
+                triggerSaveStatus();
+            }
+        }
+
+        function onBodyChange(value) {
+            const note = notes.find(n => n.id === activeNoteId);
+            if (note) {
+                note.content = value;
+                note.updatedAt = new Date().toISOString();
+                updateSidebarItem(note);
+                updateStats();
+                triggerSaveStatus();
+            }
+        }
+
+        function onCategoryChange(value) {
+            const note = notes.find(n => n.id === activeNoteId);
+            if (note) {
+                note.category = value;
+                activeCategoryBadge.textContent = value;
+                note.updatedAt = new Date().toISOString();
+                renderNotesList(); // Rerender full list to update badge positions
+                triggerSaveStatus();
+            }
+        }
+
+        // Trigger visual "saving..." effect
+        function triggerSaveStatus() {
+            saveIndicator.innerHTML = `
+                <span class="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-bounce"></span>
+                Saving...
+            `;
+            setTimeout(() => {
+                saveIndicator.innerHTML = `
+                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                    Saved locally
+                `;
+            }, 600);
+        }
+
+        // Sidebar Updating / Filtering
+        function updateSidebarItem(note) {
+            const el = document.getElementById(`note-item-${note.id}`);
+            if (el) {
+                const titleEl = el.querySelector('.note-item-title');
+                const contentEl = el.querySelector('.note-item-content');
+                
+                titleEl.textContent = note.title.trim() || 'Untitled Note';
+                contentEl.textContent = note.content.trim() || 'No additional text...';
+            }
+        }
+
+        function renderNotesList(filterText = '') {
+            notesListContainer.innerHTML = '';
+            
+            const filteredNotes = notes.filter(note => {
+                const query = filterText.toLowerCase();
+                return note.title.toLowerCase().includes(query) || note.content.toLowerCase().includes(query);
+            });
+
+            if (filteredNotes.length === 0) {
+                notesListContainer.innerHTML = `
+                    <div class="p-6 text-center text-sm text-slate-400">
+                        No notes found matching "${filterText}"
+                    </div>
+                `;
+                return;
+            }
+
+            filteredNotes.forEach(note => {
+                const isActive = note.id === activeNoteId;
+                
+                const noteEl = document.createElement('div');
+                noteEl.id = `note-item-${note.id}`;
+                noteEl.className = `note-item p-3 mb-2 rounded-xl border cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900 transition-all ${
+                    isActive ? 'bg-brand-50 dark:bg-brand-950/30 border-brand-500' : 'border-transparent'
+                }`;
+                noteEl.onclick = () => loadNote(note.id);
+
+                noteEl.innerHTML = `
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="note-item-title font-semibold text-sm truncate max-w-[140px] ${
+                            note.title.trim() ? 'text-slate-800 dark:text-slate-100' : 'text-slate-400 italic'
+                        }">
+                            ${note.title.trim() || 'Untitled Note'}
+                        </span>
+                        <span class="px-2 py-0.5 text-[10px] font-medium rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                            ${note.category}
+                        </span>
+                    </div>
+                    <p class="note-item-content text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                        ${note.content.trim() || 'No additional text...'}
+                    </p>
+                `;
+
+                notesListContainer.appendChild(noteEl);
+            });
+        }
+
+        function filterNotes() {
+            renderNotesList(searchInput.value);
+        }
+
+        // Live Statistics Tracker
+        function updateStats() {
+            const text = noteBodyTextarea.value || '';
+            const charCountVal = text.length;
+            const cleanText = text.trim().replace(/\s+/g, ' ');
+            const wordCountVal = cleanText === '' ? 0 : cleanText.split(' ').length;
+            
+            // Average reading speed is roughly 200 words per minute
+            const readTimeVal = Math.max(1, Math.ceil(wordCountVal / 200));
+
+            charCount.textContent = `${charCountVal.toLocaleString()} character${charCountVal === 1 ? '' : 's'}`;
+            wordCount.textContent = `${wordCountVal.toLocaleString()} word${wordCountVal === 1 ? '' : 's'}`;
+            readTime.textContent = `${wordCountVal === 0 ? 0 : readTimeVal} min read`;
+        }
+
+        // File Import and Exports
+        function exportNote(format) {
+            const note = notes.find(n => n.id === activeNoteId);
+            if (!note) return;
+
+            const filename = (note.title.trim() || 'Untitled-Note').replace(/[^a-zA-Z0-9-_]/g, '_');
+            let content = '';
+            let mimeType = 'text/plain';
+            let fileExtension = 'txt';
+
+            if (format === 'md') {
+                content = `# ${note.title || 'Untitled Note'}\n\nCategory: *${note.category}*\n\n${note.content}`;
+                fileExtension = 'md';
+                mimeType = 'text/markdown';
+            } else {
+                content = `Title: ${note.title || 'Untitled Note'}\nCategory: ${note.category}\n\n${note.content}`;
+            }
+
+            const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${filename}.${fileExtension}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            showNotification(`Exported as ${fileExtension.toUpperCase()}`);
+        }
+
+        function importNote(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const fullText = e.target.result;
+                const extension = file.name.split('.').pop().toLowerCase();
+                
+                let title = file.name.replace(/\.[^/.]+$/, ""); // Strip file extension
+                let finalContent = fullText;
+
+                // Handle Markdown parsing headers if present
+                if (extension === 'md' && fullText.startsWith('# ')) {
+                    const lines = fullText.split('\n');
+                    title = lines[0].replace('# ', '').trim();
+                    finalContent = lines.slice(1).join('\n').trim();
+                    // Remove category parsing if there
+                    if (finalContent.startsWith('Category: *')) {
+                        const nextLines = finalContent.split('\n');
+                        finalContent = nextLines.slice(2).join('\n').trim();
+                    }
+                }
+
+                const importedNote = {
+                    id: 'note-' + Date.now(),
+                    title: title,
+                    content: finalContent,
+                    category: 'Drafts',
+                    updatedAt: new Date().toISOString()
+                };
+
+                notes.unshift(importedNote);
+                renderNotesList();
+                loadNote(importedNote.id);
+                showNotification(`Successfully imported "${file.name}"`);
+            };
+            
+            reader.readAsText(file);
+            // Reset selection target so the same file can be uploaded again if needed
+            event.target.value = '';
+        }
+
+        // Dark/Light Mode toggle handler
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
+            } else {
+                html.classList.add('dark');
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
